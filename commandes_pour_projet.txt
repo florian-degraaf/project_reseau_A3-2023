@@ -1,0 +1,129 @@
+DIGI_SWL2_01 :
+vtp version 2
+vtp domain DIGIPLEX
+vtp password DIGIPLEX
+vtp mode SERVER
+
+vlan 10
+name Conception
+
+inter fa0/6 et fa0/4 :
+switchport mode trunk ecapsulation dot1q
+switchport trunk ecapsulation dot1q
+
+DIGI_SWL2_02 :
+vtp version 2
+vtp domain DIGIPLEX
+vtp password DIGIPLEX
+vtp mode SERVER
+
+DIGI_SWL3_01(config)#vlan 30
+DIGI_SWL3_01(config-vlan)#name Ressources_Humaine
+DIGI_SWL3_01(config-vlan)#vlan 40
+DIGI_SWL3_01(config-vlan)#name Hotline
+DIGI_SWL3_01(config-vlan)#vlan 50
+DIGI_SWL3_01(config-vlan)#name Wifi_Entreprise
+DIGI_SWL3_01(config-vlan)#vlan 60
+DIGI_SWL3_01(config-vlan)#name Wifi_invites
+DIGI_SWL3_01(config-vlan)#vlan 70
+DIGI_SWL3_01(config-vlan)#name Server
+DIGI_SWL3_01(config-vlan)#vlan 80
+DIGI_SWL3_01(config-vlan)#name Management
+
+inter range fa0/3-6 :
+switchport mode access
+switchport access vlan 20
+
+DIGI_SWL2_03 :
+vtp version 2
+vtp domain DIGIPLEX
+vtp password DIGIPLEX
+vtp mode SERVER
+
+inter range fa0/3-6 :
+switchport mode access
+switchport access vlan 10
+
+
+
+inter vlan 10
+ip address 192.168.10.254 255.255.255.0
+... vlan 80
+
+DIGI_SWL3_01 :
+
+DIGI_SWL3_01(config)#ip dhcp pool dpPool20
+DIGI_SWL3_01(dhcp-config)#network 192.168.20.0 255.255.255.0
+DIGI_SWL3_01(dhcp-config)#default-router 192.168.20.1
+DIGI_SWL3_01(dhcp-config)#dns-server 192.168.70.3
+DIGI_SWL3_01(dhcp-config)#exit
+DIGI_SWL3_01(config)#ip dhcp pool dpPool10
+DIGI_SWL3_01(dhcp-config)#network 192.168.10.0 255.255.255.0
+DIGI_SWL3_01(dhcp-config)#default-router 192.168.10.1
+DIGI_SWL3_01(dhcp-config)#dns-server 192.168.70.3
+DIGI_SWL3_01(dhcp-config)#exit
+ip dhcp excluded-address 192.168.10.1 etc ... 40.1
+
+do this on dhcp server, then :
+int vlan 10 ... 80
+ip helper-address 192.168.70.1
+
+DIGI_SWL3_01(config)#interface FastEthernet0/7
+DIGI_SWL3_01(config-if)#
+DIGI_SWL3_01(config-if)#switchport trunk encapsulation dot1q
+DIGI_SWL3_01(config-if)#switchport mode trunk
+DIGI_SWL3_01(config-if)#switchport trunk native vlan 70
+
+
+//etherchannel
+one switch active (RDC) one passive (all other floors)
+DIGI1_SWL2_01(config)#inter range fa0/11-12
+DIGI1_SWL2_01(config-if-range)#channel-protocol lacp
+DIGI1_SWL2_01(config-if-range)#channel-group 1 mode passive
+set all interfaces to trunk
+
+
+//ssh
+DIGI_SWL2_02>en
+DIGI_SWL2_02#conf t
+Enter configuration commands, one per line.  End with CNTL/Z.
+DIGI_SWL2_02(config)#ip domain name DIGIPLEX
+DIGI_SWL2_02(config)#crypto key generate rsa
+The name for the keys will be: DIGI_SWL2_02.DIGIPLEX
+Choose the size of the key modulus in the range of 360 to 2048 for your
+  General Purpose Keys. Choosing a key modulus greater than 512 may take
+  a few minutes.
+
+How many bits in the modulus [512]: 1024
+% Generating 1024 bit RSA keys, keys will be non-exportable...[OK]
+
+DIGI_SWL2_02(config)#enable password DIGIPLEX
+*Mar 1 0:30:8.660: %SSH-5-ENABLED: SSH 1.99 has been enabled
+DIGI_SWL2_02(config)#username DIGIPLEX password DIGIPLEX
+DIGI_SWL2_02(config)#ip ssh version 2
+DIGI_SWL2_02(config)#line vty 0 15
+DIGI_SWL2_02(config-line)#transport input ssh
+DIGI_SWL2_02(config-line)#login local
+
+//access web
+Router(config)#interface GigabitEthernet0/0/0
+Router(config-if)#ip nat outside
+Router(config-if)#int fa0/0
+Router(config-if)#ip nat inside
+Router(config-if)#exit
+Router(config)#acc
+Router(config)#access-list 1 permit 192.168.10.0 0.0.0.255
+Router(config)#access-list 1 permit 192.168.20.0 0.0.0.255
+Router(config)#access-list 1 permit 192.168.30.0 0.0.0.255
+Router(config)#access-list 1 permit 192.168.40.0 0.0.0.255
+Router(config)#access-list 1 permit 192.168.50.0 0.0.0.255
+Router(config)#access-list 1 permit 192.168.60.0 0.0.0.255
+Router(config)#access-list 1 permit 192.168.70.0 0.0.0.255
+Router(config)#access-list 1 permit 192.168.80.0 0.0.0.255
+Router(config)#
+
+
+//ip route
+DIGI_SWL3_01(config)#ip route 0.0.0.0 0.0.0.0 192.168.70.200
+Router(config)#ip route 192.168.0.0 255.255.0.0 192.168.70.254
+Router(config)#ip route 0.0.0.0 0.0.0.0 GigabitEthernet0/0/0
